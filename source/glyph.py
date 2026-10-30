@@ -32,8 +32,11 @@ class Family:
     written at upm. widths: the advance widths it matches, by style and
     code point (metrics/KEY.json), so text lays out the same. weight: its
     stems against the base weights; width, spacing, contrast: counters,
-    sidebearings, level strokes' weight; k_bias: rounder (below 0) or
-    squarer curves; ends: how curved strokes end (tilt, level or square);
+    sidebearings, level strokes' weight (weight, width, spacing, contrast
+    and upper_width can differ by master: {master name: number}); k_bias:
+    rounder (below 0) or
+    squarer curves; ends: how curved strokes end (tilt, level, square or
+    upright);
     aperture: how far round c, e and s close; g, y, a: single- or
     double-storey g, straight or curved y tail, a with or without a spur;
     dots: round or square; t_top: t's top cut; one_foot: a foot on 1;
@@ -41,13 +44,17 @@ class Family:
     figures: the figures' counters against the letters' (narrower figures,
     more room between them); kern: the kerning's strength; match_widths:
     whether its widths match the family it stands in for (metrics/KEY.json);
-    space: its word space, where it doesn't take the matched one."""
+    space: its word space, where it doesn't take the matched one; join: how
+    thin strokes get where they leave a stem, against the base; caps: the
+    capitals' weight against the lowercase's; upper_width: the capitals'
+    and figures' counters against the lowercase's; humanist: the interface
+    letters, with high shoulders and small, round hooks."""
 
     def __init__(self, key, name, x, cap, asc, desc, masters, italics, slant, weight=1.0, width=1.0,
                  spacing=1.0, contrast=1.0, k_bias=0.0, ends="tilt", tilt=1.0, aperture=1.0, g="single",
                  y="straight", a="plain", dots="round", t_top=24, one_foot=False, G_spur=False,
                  mono=None, serif=False, figures=1.0, kern=1.0, match_widths=True, space=None,
-                 upm=2048):
+                 join=1.0, caps=1.0, upper_width=1.0, humanist=False, upm=2048):
         self.key, self.family = key, name
         self.x, self.cap, self.asc, self.desc = x, cap, asc, desc
         self.masters, self.italics, self.slant = masters, italics, slant
@@ -56,6 +63,8 @@ class Family:
         self.g, self.y, self.a, self.dots, self.t_top = g, y, a, dots, t_top
         self.one_foot, self.G_spur, self.mono, self.serif, self.upm = one_foot, G_spur, mono, serif, upm
         self.figures, self.kern, self.match_widths, self.space = figures, kern, match_widths, space
+        self.join, self.caps, self.humanist = join, caps, humanist
+        self.upper_width = upper_width
         self.metrics, self.widths = {}, {}
 
     def load(self):
@@ -73,6 +82,17 @@ class Family:
 STYLE = None  # the family being drawn
 
 
+def by_master(value, name):
+    """a family's number, for this master"""
+    return value.get(name, 1.0) if isinstance(value, dict) else value
+
+
+def shaped(plain, humanist):
+    """a number in a letter's drawing: the plain one, or the interface
+    letters' own"""
+    return humanist if STYLE.humanist else plain
+
+
 def ends(tilt):
     """how a curved stroke's end is cut in this family (arguments for
     Stroke and its end): tilt is how far towards upright, where the family
@@ -81,6 +101,8 @@ def ends(tilt):
         return {}
     if STYLE.ends == "level":
         return {"tilt": -90}
+    if STYLE.ends == "upright":
+        return {"upright": True}
     return {"tilt": tilt * STYLE.tilt}
 
 
@@ -118,13 +140,15 @@ class Master:
         F = STYLE
         self.name, self.wght, self.italic = name, wght, italic
         v = {k: between(vals, wght) for k, vals in BASE.items()}
-        # (a family's weight can differ by master: {master name: weight})
-        weight = F.weight.get(name, 1.0) if isinstance(F.weight, dict) else F.weight
-        self.stem, self.ustem = v["stem"] * weight, v["ustem"] * weight
-        self.hair, self.uhair = v["hair"] * weight * F.contrast, v["uhair"] * weight * F.contrast
-        self.sb, self.usb = v["sb"] * F.spacing, v["usb"] * F.spacing
-        self.counter = v["counter"] * F.width
-        self.join, self.ov = v["join"], v["ov"]
+        weight, contrast = by_master(F.weight, name), by_master(F.contrast, name)
+        self.width, self.upper_width = by_master(F.width, name), by_master(F.upper_width, name)
+        self.stem, self.ustem = v["stem"] * weight, v["ustem"] * weight * F.caps
+        self.hair = v["hair"] * weight * contrast
+        self.uhair = v["uhair"] * weight * contrast * F.caps
+        spacing = by_master(F.spacing, name)
+        self.sb, self.usb = v["sb"] * spacing, v["usb"] * spacing
+        self.counter = v["counter"] * self.width
+        self.join, self.ov = v["join"] * F.join, v["ov"]
         self.uov = self.ov + 2
         self.a, self.b = self.stem / 2, self.hair / 2
         self.ua, self.ub = self.ustem / 2, self.uhair / 2
@@ -134,6 +158,10 @@ class Master:
         self.rnd = 1.04
         # the fullness of round curves (0.552 is a circle's)
         self.k = 0.58
+        # how far the curve's handles reach at a round's sides and at its top
+        # and foot: flatter tops keep a counter round, not pointed, however
+        # thin the stroke gets there
+        self.ks, self.kt = (self.t(0.54, 0.52, 0.46), self.t(0.64, 0.65, 0.80)) if F.humanist else (self.k, self.k)
         style = name if not italic else ("Italic" if name == "Regular" else name + " Italic")
         self.widths = F.widths.get(style) or F.widths.get(name) or {}
 
@@ -192,8 +220,8 @@ class Draw:
     def nib(self):
         return self.P.unib if self.upper else self.P.nib
 
-    def stroke(self, p, s=1.0, nib=None, cap=None, tilt=None):
-        st = Stroke(p, nib or self.nib, s, cap, tilt)
+    def stroke(self, p, s=1.0, nib=None, cap=None, tilt=None, upright=False):
+        st = Stroke(p, nib or self.nib, s, cap, tilt, upright)
         st.key = (self.name, len(self.strokes))
         self.strokes.append(st)
         return st

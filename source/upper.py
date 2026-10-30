@@ -2,7 +2,7 @@
 
 from engine import unit
 from serifs import arm, arm_length, end, foot, head
-from glyph import ends, glyph
+from glyph import ends, glyph, shaped
 from parts import (bar, bottom_line, edges, part_of, place, point_of, quarter, ring, stem, through,
                    top_line, x_at, zigzag)
 
@@ -25,7 +25,7 @@ def H(g):
     xl, xr = P.ua, P.ustem + P.cw(410) + P.ua
     stem(g, xl, 0, P.C)
     stem(g, xr, 0, P.C)
-    bar(g, xl, xr, P.C * 0.5, s=0.94)
+    bar(g, xl, xr, P.C * 0.5, s=shaped(0.94, 1.04))
     for x in (xl, xr):
         head(g, x, P.C, side="both", upper=True)
         foot(g, x, upper=True)
@@ -292,7 +292,7 @@ def K(g):
     through(g, c0, c1, nib=nib, cap0=90, cap1=0)
     t = 0.42
     lx, ly = c0[0] + (c1[0] - c0[0]) * t, c0[1] + (c1[1] - c0[1]) * t
-    d0, d1 = place(nib, (w, 0), (lx - P.ua * 0.4, ly + P.ub * 0.2), 1, 0, 1.0, 0.9)
+    d0, d1 = place(nib, (w, 0), (lx - P.ua * shaped(0.4, 0.1), ly + P.ub * shaped(0.2, -0.3)), 1, 0, 1.0, 0.9)
     through(g, d0, d1, s0=1.0, s1=0.9, nib=nib, cap0=0, cap1=0)
     head(g, xs, P.C, side="both", upper=True)
     foot(g, xs, upper=True)
@@ -325,7 +325,9 @@ def Q(g):
     ring(g, 0, w, bottom_line(P, True), top_line(P, True))
     nib = g.nib.scaled(1.0)
     # the tail from the bowl's foot, out and down
-    through(g, (w * 0.56, bottom_line(P, True) + P.ub * 0.2), (w * 0.94, -P.C * 0.19), s0=0.9, s1=1.0, nib=nib,
+    import glyph as Gl
+    x0, x1, drop = (0.60, 1.05, 0.125) if Gl.STYLE.humanist else (0.56, 0.94, 0.19)
+    through(g, (w * x0, bottom_line(P, True) + P.ub * 0.2), (w * x1, -P.C * drop), s0=0.9, s1=1.0, nib=nib,
             cap0=None, cap1=None)
     marks(g, w / 2)
     g.space(0.6, 0.6)
@@ -336,9 +338,9 @@ def big_c(P, w, cut0, cut1):
     xl, xr = a * P.rnd, w - a * P.rnd
     cx, cy = w / 2, P.C / 2
     yt, yb = top_line(P, True), bottom_line(P, True)
-    k = P.k
-    return (quarter((xr, cy), (cx, yt), "v", k), quarter((cx, yt), (xl, cy), "h", k),
-            quarter((xl, cy), (cx, yb), "v", k), quarter((cx, yb), (xr, cy), "h", k))
+    up, flat = (P.ks, P.kt), (P.kt, P.ks)
+    return (quarter((xr, cy), (cx, yt), "v", up), quarter((cx, yt), (xl, cy), "h", flat),
+            quarter((xl, cy), (cx, yb), "v", up), quarter((cx, yb), (xr, cy), "h", flat))
 
 
 @U("C", 0x43)

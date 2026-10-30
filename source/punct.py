@@ -819,7 +819,7 @@ def ampersand(g):
     P = g.P
     import glyph as G
     nib = g.nib.scaled(1.02)
-    w = P.cw(470) / min(1.0, G.STYLE.width) + P.stem * 2  # never narrower: its loops need room
+    w = P.cw(470) / min(1.0, P.width) + P.stem * 2  # never narrower: its loops need room
     a = nib.a
     yt = P.C + P.uov - nib.b
     yb = -P.uov + nib.b
@@ -959,7 +959,7 @@ def sterling(g):
     P = g.P
     import glyph as G
     nib = g.nib.scaled(P.t(0.97, 0.97, 0.84))
-    w = P.cw(330) / min(1.0, G.STYLE.width) + P.ustem * 2
+    w = P.cw(330) / min(1.0, P.width) + P.ustem * 2
     a, b = nib.a, nib.b
     xs = w * 0.30
     yt = P.C + P.uov - b

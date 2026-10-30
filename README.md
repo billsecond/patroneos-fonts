@@ -21,7 +21,7 @@ too.
 
 ## Download
 
-Get **PatroneOS-Fonts-1.0.0.zip** from the
+Get **PatroneOS-Fonts-1.1.0.zip** from the
 [latest release](https://github.com/billsecond/patroneos-fonts/releases/latest).
 It holds all five families as TrueType fonts, with the licence and the
 FONTLOG. Web fonts (WOFF2) are in [fonts/webfonts](fonts/webfonts).
