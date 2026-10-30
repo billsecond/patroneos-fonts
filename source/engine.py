@@ -242,9 +242,12 @@ class Stroke:
     across the stroke, an angle (degrees) cuts them along that direction.
     tilt0, tilt1 instead turn the square cut so many degrees towards
     upright (or, below zero, towards level), for terminals cut at a slant.
+    upright0, upright1 stop each side exactly on the upright through the
+    centre line's end: for an upright cut on a stroke that's nearly level,
+    which moving the end point there would kink.
     """
 
-    def __init__(self, p, nib, s=1.0, cap=None, tilt=None):
+    def __init__(self, p, nib, s=1.0, cap=None, tilt=None, upright=False):
         self.nib = nib
         self.points = [tuple(p)]
         self.scales = [s]
@@ -255,6 +258,8 @@ class Stroke:
         self.cap1 = None
         self.tilt0 = tilt
         self.tilt1 = None
+        self.upright0 = upright
+        self.upright1 = False
 
     @property
     def here(self):
@@ -312,9 +317,10 @@ class Stroke:
         self.closed = True
         return self
 
-    def end(self, cap=None, tilt=None):
+    def end(self, cap=None, tilt=None, upright=False):
         self.cap1 = cap
         self.tilt1 = tilt
+        self.upright1 = upright
         return self
 
     # ---- outline
@@ -325,12 +331,22 @@ class Stroke:
         seg = self.segs[i]
         s0, s1 = self.scales[i], self.scales[i + 1]
 
-        def off(t):
-            p = seg_point(seg, t)
-            tan = seg_tangent(seg, t)
+        def raw(t):
+            # (past its ends a side runs straight on, along its direction there)
+            u = min(1.0, max(0.0, t))
+            p = seg_point(seg, u)
+            tan = seg_tangent(seg, u)
             n = (-tan[1] * sign, tan[0] * sign)
-            s = s0 + (s1 - s0) * smooth(t)
-            return add(p, mul(self.nib.support(n), s))
+            s = s0 + (s1 - s0) * smooth(u)
+            return add(add(p, mul(self.nib.support(n), s)), mul(tan, (t - u) * 300))
+
+        # (the part of the segment this side covers: all of it, unless an
+        # upright end stops it sooner or takes it further)
+        lo = upright_reach(raw, self.points[0][0], 0.0) if self.upright0 and i == 0 else 0.0
+        hi = upright_reach(raw, self.points[-1][0], 1.0) if self.upright1 and i == len(self.segs) - 1 else 1.0
+
+        def off(t):
+            return raw(lo + (hi - lo) * t)
 
         if seg[0] == "L":
             return [["L", off(0.0), off(1.0)]]
@@ -342,8 +358,8 @@ class Stroke:
             samples = [off(ta + (tb - ta) * k / 24) for k in range(25)]
             # where the scale changes the side isn't parallel to the centre
             # line, so inner ends take the side's own direction
-            t0 = seg_tangent(seg, 0.0) if j == 0 else unit(sub(off(ta + 1e-4), off(ta - 1e-4)))
-            t1 = seg_tangent(seg, 1.0) if j == n - 1 else unit(sub(off(tb + 1e-4), off(tb - 1e-4)))
+            t0 = seg_tangent(seg, lo) if j == 0 else unit(sub(off(ta + 1e-4), off(ta - 1e-4)))
+            t1 = seg_tangent(seg, hi) if j == n - 1 else unit(sub(off(tb + 1e-4), off(tb - 1e-4)))
             c, err = fit_cubic(samples, t0, t1)
             if key:
                 ERRORS[key] = max(ERRORS.get(key, 0.0), err)
@@ -402,6 +418,23 @@ def _tilted(tan, tilt):
     if abs(off) < 40:
         cut = along + math.copysign(40, off or 1)
     return direction(cut)
+
+
+def upright_reach(side, x, t):
+    """where near t a side of a segment (a function of t) meets the upright
+    at x"""
+    a, b = t - 0.6, t + 0.6
+    fa = side(a)[0] - x
+    if fa * (side(b)[0] - x) > 0:
+        return t
+    for _ in range(40):
+        m = (a + b) / 2
+        fm = side(m)[0] - x
+        if fa * fm <= 0:
+            b = m
+        else:
+            a, fa = m, fm
+    return (a + b) / 2
 
 
 def _cut(seg, which, centre, tan, cut):

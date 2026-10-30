@@ -6,7 +6,7 @@ import copy
 import math
 
 from engine import direction, ellipse, mul, sub
-from glyph import Master, ends, glyph
+from glyph import Master, ends, glyph, shaped
 from parts import bar, bottom_line, part_of, place, point_of, quarter, ring, stem, through
 
 FIGURES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
@@ -46,7 +46,7 @@ def zero(g):
     P = g.P
     import glyph as G
     w = figure_width(P) - P.cw(14)
-    ring(g, 0, w, bottom(P), top(P), k=0.6)
+    ring(g, 0, w, bottom(P), top(P), k=shaped(0.6, (P.ks - 0.04, P.kt + 0.07)))
     if G.STYLE.mono:
         # a dot inside, so 0 isn't O in a font where both are one width:
         # an upright oval, which stays clear at text sizes, where a round

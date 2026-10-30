@@ -43,10 +43,9 @@ draws the families, writes them as UFO sources, compiles them with fontmake,
 hints them with ttfautohint and checks them with fontbakery.
 
 No outline, point, kerning pair or hint was taken from any other font, and
-nothing was traced. The Sans, Mono, Document and Classic take their
-letters' advance widths, and their line spacing, from widely used fonts
-(source/metrics/), so that text set for those fonts keeps its layout; that
-is all they share with them.
+nothing was traced. Most of the families' advance widths and line spacing
+follow widely used fonts (source/metrics/), so that text set for those
+fonts keeps its layout.
 
 The fonts were made with AI help: the drawing code was written with an AI
 assistant, under William Daugherty's direction, and every family was
@@ -55,6 +54,13 @@ checked and approved by him.
 
 ChangeLog
 ---------
+
+30 October 2026 (William Daugherty) PatroneOS fonts version 1.1.0
+- PatroneOS Sans redrawn: new letter shapes, proportions and spacing,
+  narrower letters, a single-storey g, and a heavier Bold. SemiBold is now
+  drawn in its own right.
+- PatroneOS Mono, Document, Serif and Classic have the same glyphs as in
+  1.0.0.
 
 29 October 2026 (William Daugherty) PatroneOS fonts version 1.0.0
 - First release: PatroneOS Sans, Mono, Document, Serif and Classic, 28

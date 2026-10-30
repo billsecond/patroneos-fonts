@@ -3,6 +3,7 @@
 import math
 
 from engine import direction, dot, split, sub, unit
+from glyph import shaped
 
 
 def mirror_angle(a, flip):
@@ -51,11 +52,15 @@ def arch(g, xl, xr, down_to=0, apex=0.5, top=None, join=None, shoulder=None, upp
     P = g.P
     yt = top_line(P, upper) if top is None else top
     yj = P.X - P.t(140, 150, 205) if join is None else join
-    ys = P.X * 0.56 if shoulder is None else shoulder
-    xt = xl + (xr - xl) * apex
+    ys = P.X * shaped(0.56, 0.62) if shoulder is None else shoulder
+    xt = xl + (xr - xl) * shaped(apex, apex + 0.06)
+    # (the interface letters leave the stem lower and steeper, for a clear
+    # notch at the top of the stem and a round corner under the arch)
+    if join is None:
+        yj = shaped(yj, P.X - P.t(200, 210, 250))
     s = g.stroke((xl, yj), s=P.join)
-    s.to((xt, yt), 60, 0, k=(0.40, 0.56), s=1.0)
-    s.arc((xr, ys), "h", k=(0.62, 0.60), s=1.0)
+    s.to((xt, yt), shaped(60, 62), 0, k=shaped((0.40, 0.56), (0.34, 0.50)), s=1.0)
+    s.arc((xr, ys), "h", k=shaped((0.62, 0.60), (0.70, 0.56)), s=1.0)
     s.line((xr, down_to))
     return s
 
@@ -68,15 +73,21 @@ def bowl(g, xs, xo, flip=False, top_join=None, bottom_join=None, apex=0.47, bott
     yt, yb = top_line(P), bottom_line(P)
     yjt = P.X - P.t(140, 150, 205) if top_join is None else top_join
     yjb = P.t(100, 104, 140) if bottom_join is None else bottom_join
+    if top_join is None:
+        yjt = shaped(yjt, P.X - P.t(190, 200, 240))
+    if bottom_join is None:
+        yjb = shaped(yjb, P.t(104, 110, 156))
     cy = P.X * 0.5 if mid is None else mid
-    xt = xs + (xo - xs) * apex
-    xb = xs + (xo - xs) * bottom_apex
-    kk = P.k if k is None else k
+    xt = xs + (xo - xs) * shaped(apex, apex + 0.05)
+    xb = xs + (xo - xs) * shaped(bottom_apex, bottom_apex + 0.03)
+    side, flat = (P.ks, P.kt) if k is None else (k, k)
     s = g.stroke((xs, yjt), s=P.join)
-    s.to((xt, yt), mirror_angle(60, flip), mirror_angle(0, flip), k=(0.40, 0.56), s=1.0)
-    s.arc((xo, cy), "h", k=kk, s=P.rnd)
-    s.arc((xb, yb), "v", k=kk, s=1.0)
-    s.to((xs, yjb), mirror_angle(180, flip), mirror_angle(150, flip), k=(0.52, 0.40), s=P.join)
+    s.to((xt, yt), mirror_angle(shaped(60, 62), flip), mirror_angle(0, flip),
+         k=shaped((0.40, 0.56), (0.34, 0.50)), s=1.0)
+    s.arc((xo, cy), "h", k=(flat, side), s=P.rnd)
+    s.arc((xb, yb), "v", k=(side, flat), s=1.0)
+    s.to((xs, yjb), mirror_angle(180, flip), mirror_angle(shaped(150, 128), flip),
+         k=shaped((0.52, 0.40), (0.46, 0.42)), s=P.join)
     return s
 
 
@@ -88,12 +99,12 @@ def ring(g, x0, x1, y0, y1, k=None, side=None, flat=None, upper=False):
     sd = P.rnd if side is None else side
     xl, xr = x0 + nib.a * sd, x1 - nib.a * sd
     cx, cy = (xl + xr) / 2, (y0 + y1) / 2
-    kk = P.k if k is None else k
+    up, flat = (P.ks, P.kt) if k is None else k if isinstance(k, tuple) else (k, k)
     s = g.stroke((xr, cy), s=sd)
-    s.arc((cx, y1), "v", k=kk, s=1.0)
-    s.arc((xl, cy), "h", k=kk, s=sd)
-    s.arc((cx, y0), "v", k=kk, s=1.0)
-    s.arc((xr, cy), "h", k=kk, s=sd)
+    s.arc((cx, y1), "v", k=(up, flat), s=1.0)
+    s.arc((xl, cy), "h", k=(flat, up), s=sd)
+    s.arc((cx, y0), "v", k=(up, flat), s=1.0)
+    s.arc((xr, cy), "h", k=(flat, up), s=sd)
     s.close()
     return s
 

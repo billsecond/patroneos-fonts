@@ -36,6 +36,9 @@ def load_glyphs():
     import punct  # noqa: F401
     import boxes  # noqa: F401
     import marks  # noqa: F401
+    if G.STYLE.humanist:
+        import humanist
+        humanist.install()
     import composites
     composites.add_composites()
 
@@ -52,7 +55,7 @@ def with_counter(master, fit):
 
 
 def draw_one(master, name, upper, f, out, fit=1.0):
-    g = G.Draw(with_counter(master, fit), name, upper=upper)
+    g = G.Draw(with_counter(master, fit * (master.upper_width if upper else 1.0)), name, upper=upper)
     g.glyphs = out
     f(g)
     return g
@@ -240,7 +243,7 @@ LICENSE = (
     "This Font Software is licensed under the SIL Open Font License, Version 1.1. "
     "This license is available with a FAQ at: https://openfontlicense.org"
 )
-VERSION = (1, 0)
+VERSION = (1, 100)  # (fonts count thousandths: 1.100 is release 1.1.0)
 
 
 def description(fam):

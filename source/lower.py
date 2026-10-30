@@ -1,6 +1,6 @@
 """The lowercase."""
 
-from glyph import ends, glyph
+from glyph import ends, glyph, shaped
 from parts import (arch, bar, bottom_line, bowl, edge_line, edges, part_of, place, point_of,
                    quarter, ring, stem, through, top_line, x_at, zigzag)
 from engine import unit
@@ -24,7 +24,7 @@ def mono_slab(g, x0, x1, y, top=True, upper=False):
 
 
 def dot_radius(P):
-    return P.stem * 0.6
+    return P.stem * shaped(0.6, P.t(0.83, 0.656, 0.46))
 
 
 def i_dot(g, x):
@@ -33,6 +33,8 @@ def i_dot(g, x):
     P = g.P
     r = dot_radius(P)
     y = max(P.A - r - P.t(4, 4, 0), P.X + P.stem * 1.0 + r)
+    if shaped(False, True):
+        y = max(P.t(700, 730, 738) - r, P.X + P.stem * 0.8 + r)
     g.dot(x, y, r)
 
 
@@ -43,7 +45,7 @@ def i_dot(g, x):
 def n(g):
     P = g.P
     xl = P.a
-    xr = P.stem + P.cw(290) + P.a
+    xr = P.stem + P.cw(shaped(290, 264)) + P.a
     stem(g, xl, 0, P.X)
     arch(g, xl, xr)
     head(g, xl, P.X)
@@ -57,7 +59,7 @@ def n(g):
 def h(g):
     P = g.P
     xl = P.a
-    xr = P.stem + P.cw(290) + P.a
+    xr = P.stem + P.cw(shaped(290, 264)) + P.a
     stem(g, xl, 0, P.A)
     arch(g, xl, xr)
     head(g, xl, P.A)
@@ -70,7 +72,7 @@ def h(g):
 @glyph("m", 0x6D)
 def m(g):
     P = g.P
-    c = P.cw(236)
+    c = P.cw(shaped(236, 226))
     x1 = P.a
     x2 = x1 + P.stem + c
     x3 = x2 + P.stem + c
@@ -88,13 +90,14 @@ def m(g):
 def u(g):
     P = g.P
     xl = P.a
-    xr = P.stem + P.cw(290) + P.a
+    xr = P.stem + P.cw(shaped(290, 264)) + P.a
     stem(g, xr, 0, P.X)
     yb = bottom_line(P)
     s = g.stroke((xl, P.X))
     s.line((xl, P.X * 0.44))
-    s.arc(((xl + xr) / 2, yb), "v", k=(0.60, 0.62))
-    s.to((xr, P.t(140, 150, 205)), 0, 60, k=(0.56, 0.40), s=P.join)
+    s.arc((xl + (xr - xl) * shaped(0.5, 0.44), yb), "v", k=(0.60, 0.62))
+    s.to((xr, shaped(P.t(140, 150, 205), P.t(190, 200, 240))), 0, shaped(60, 62), k=shaped((0.56, 0.40), (0.50, 0.34)),
+         s=P.join)
     head(g, xl, P.X)
     head(g, xr, P.X)
     foot(g, xr, side="right")
@@ -150,7 +153,7 @@ def r_mono(g):
 
 
 def o_width(P):
-    return P.cw(300) + 2 * P.stem * P.rnd
+    return P.cw(shaped(300, 318)) + 2 * P.stem * P.rnd
 
 
 @glyph("o", 0x6F)
@@ -168,12 +171,12 @@ def c_curves(P, w, mid=None):
     cx = w / 2
     cy = P.X * 0.5 if mid is None else mid
     yt, yb = top_line(P), bottom_line(P)
-    k = P.k
+    up, flat = (P.ks, P.kt), (P.kt, P.ks)
     return (
-        quarter((xr, cy), (cx, yt), "v", k),
-        quarter((cx, yt), (xl, cy), "h", k),
-        quarter((xl, cy), (cx, yb), "v", k),
-        quarter((cx, yb), (xr, cy), "h", k),
+        quarter((xr, cy), (cx, yt), "v", up),
+        quarter((cx, yt), (xl, cy), "h", flat),
+        quarter((xl, cy), (cx, yb), "v", up),
+        quarter((cx, yb), (xr, cy), "h", flat),
     )
 
 
@@ -225,14 +228,19 @@ def a_parts(g, stem_down=True):
     """a's hook and bowl; returns the stem's centre line (æ joins its e
     there)"""
     P = g.P
-    w = P.cw(250) + 2 * P.stem
+    w = P.cw(shaped(250, 238)) + 2 * P.stem
     xs = w - P.a
     yt = top_line(P)
-    # the hook over the top, into the stem
-    s = g.stroke((P.a * 1.1 + P.cw(20), P.X * P.t(0.80, 0.80, 0.78)), s=1.0, **ends(P.t(22, 22, 12)))
-    s.to((w * 0.50, yt), P.t(58, 58, 34), 0, k=(0.42, 0.52))
-    ball(g, s, start=True)
+    # the hook over the top, into the stem (in the interface letters it
+    # flattens and is cut upright, as their other rounds do)
     import glyph as G
+    if G.STYLE.humanist:
+        s = g.stroke((P.a * 0.75 + P.cw(10), P.X * 0.88), s=0.96, upright=True)
+        s.to((w * 0.50, yt), 28, 0, k=(0.30, 0.40), s=1.0)
+    else:
+        s = g.stroke((P.a * 1.1 + P.cw(20), P.X * P.t(0.80, 0.80, 0.78)), s=1.0, **ends(P.t(22, 22, 12)))
+        s.to((w * 0.50, yt), P.t(58, 58, 34), 0, k=(0.42, 0.52))
+    ball(g, s, start=True)
     s.arc((xs, P.X * 0.56), "h", k=(0.62, 0.58))
     if stem_down and G.STYLE.a == "spur":
         # the stem turns out into a short spur at its foot
@@ -247,8 +255,12 @@ def a_parts(g, stem_down=True):
     yb = bottom_line(P)
     xbl = P.a * P.rnd
     xm = xbl + (xs - xbl) * 0.42
-    b = g.stroke((xs, ybt), s=0.86)
-    b.line((xs - (xs - xbl) * 0.42, ybt))
+    if G.STYLE.humanist:  # (its top falls a little away from the stem)
+        b = g.stroke((xs, ybt + P.b * 0.5), s=0.86)
+        b.to((xs - (xs - xbl) * 0.42, ybt), 188, 180, k=0.4)
+    else:
+        b = g.stroke((xs, ybt), s=0.86)
+        b.line((xs - (xs - xbl) * 0.42, ybt))
     side = P.t(P.rnd, P.rnd, 0.92)
     b.arc((xbl, (ybt + yb) * 0.5), "h", k=(0.60, 0.62), s=side)
     b.arc((xm, yb), "v", k=(0.62, 0.60), s=1.0)
@@ -269,7 +281,7 @@ def a(g):
 def b(g):
     P = g.P
     xs = P.a
-    xo = xs + P.a + P.cw(292) + P.a * P.rnd
+    xo = xs + P.a + P.cw(shaped(292, 296)) + P.a * P.rnd
     stem(g, xs, 0, P.A)
     bowl(g, xs, xo)
     head(g, xs, P.A)
@@ -281,7 +293,7 @@ def b(g):
 def d(g):
     P = g.P
     xo = P.a * P.rnd
-    xs = xo + P.a * P.rnd + P.cw(292) + P.a
+    xs = xo + P.a * P.rnd + P.cw(shaped(292, 296)) + P.a
     stem(g, xs, 0, P.A)
     bowl(g, xs, xo, flip=True)
     head(g, xs, P.A)
@@ -294,7 +306,7 @@ def d(g):
 def p(g):
     P = g.P
     xs = P.a
-    xo = xs + P.a + P.cw(292) + P.a * P.rnd
+    xo = xs + P.a + P.cw(shaped(292, 296)) + P.a * P.rnd
     stem(g, xs, P.D, P.X)
     bowl(g, xs, xo)
     head(g, xs, P.X)
@@ -307,7 +319,7 @@ def p(g):
 def q(g):
     P = g.P
     xo = P.a * P.rnd
-    xs = xo + P.a * P.rnd + P.cw(292) + P.a
+    xs = xo + P.a * P.rnd + P.cw(shaped(292, 296)) + P.a
     stem(g, xs, P.D, P.X)
     bowl(g, xs, xo, flip=True)
     foot(g, xs, P.D)
@@ -550,7 +562,7 @@ def f(g):
 def k(g):
     P = g.P
     xs = P.a
-    w = P.stem + P.cw(330)
+    w = P.stem + P.cw(shaped(330, 318))
     stem(g, xs, 0, P.A)
     nib = P.nib.scaled(0.96)
     yj = P.X * 0.32
@@ -559,7 +571,7 @@ def k(g):
     # the leg leaves the arm and runs to the baseline
     t = 0.40
     lx, ly = c0[0] + (c1[0] - c0[0]) * t, c0[1] + (c1[1] - c0[1]) * t
-    d0, d1 = place(nib, (w, 0), (lx - P.a * 0.4, ly + P.b * 0.2), 1, 0, 1.0, 0.9)
+    d0, d1 = place(nib, (w, 0), (lx - P.a * shaped(0.4, 0.1), ly + P.b * shaped(0.2, -0.3)), 1, 0, 1.0, 0.9)
     through(g, d0, d1, s0=1.0, s1=0.9, nib=nib, cap0=0, cap1=0)
     head(g, xs, P.A)
     foot(g, xs)
@@ -572,7 +584,7 @@ def k(g):
 @glyph("v", 0x76)
 def v(g):
     P = g.P
-    w = P.stem * 1.8 + P.cw(326)
+    w = P.stem * 1.8 + P.cw(shaped(326, 314))
     nib = g.nib.scaled(0.95)
     cuts = zigzag(g, [(0, P.X), (w / 2, 0, P.stem * 0.5), (w, P.X)], [(1.0, 0.9), (0.9, 1.0)], nib)
     end(g, cuts[0][0], P.X)
@@ -585,7 +597,7 @@ def v(g):
 def w(g):
     """two even vees, the middle one reaching the x-height"""
     P = g.P
-    wd = P.stem * 3.2 + P.cw(560)
+    wd = P.stem * 3.2 + P.cw(shaped(560, 536))
     nib = g.nib.scaled(0.92)
     flat = P.stem * 0.46
     q = wd / 4
@@ -603,7 +615,7 @@ def w(g):
 @glyph("x", 0x78)
 def x(g):
     P = g.P
-    w = P.stem * 1.6 + P.cw(310)
+    w = P.stem * 1.6 + P.cw(shaped(310, 300))
     nib = g.nib.scaled(0.95)
     for st in (edge_line(g, (w * 0.03, P.X), (w, 0), -1, 1, nib=nib),
                edge_line(g, (w * 0.97, P.X), (0, 0), 1, -1, nib=nib)):
